@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en" class="h-full scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NNC · Nonce</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { brand: { DEFAULT:'#6D5DF6' } },
+          boxShadow: { soft: '0 18px 48px -20px rgba(0,0,0,.35)' },
+          borderRadius: { xl2: '1.25rem' }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .glass{background:rgba(255,255,255,.6);backdrop-filter:saturate(180%) blur(8px);border:1px solid rgba(24,24,27,.12)}
+    .dark .glass{background:rgba(24,24,27,.55);border-color:rgba(250,250,250,.08)}
+    .navlink{display:block;padding:.6rem .9rem;border-radius:.75rem;font-size:.95rem;font-weight:600;color:rgba(24,24,27,.75)}
+    .dark .navlink{color:rgba(250,250,250,.85)}
+    .navlink:hover{background:rgba(24,24,27,.06)}
+    .dark .navlink:hover{background:rgba(250,250,250,.08)}
+    .navlink.active{background:rgba(109,93,246,.18);color:#5a45ff}
+    .dark .navlink.active{color:#cfcaff;background:rgba(109,93,246,.22)}
+    .section{scroll-margin-top:96px}
+    pre{position:relative}
+    .copy-btn{position:absolute;top:.5rem;right:.5rem;font-size:.75rem;padding:.25rem .5rem;border-radius:.5rem;background:#3f3f46;color:#fff}
+    .copy-btn:hover{background:#52525b}
+  </style>
+</head>
+<body class="h-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+<script>
+  // Theme persistence + icon sync
+  (function () {
+    const k='nnc-theme';
+    const saved = localStorage.getItem(k);
+    const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const wantDark = saved ? saved==='dark' : prefersDark;
+    if (wantDark) document.documentElement.classList.add('dark');
+
+    function syncIcons(){
+      const dark = document.documentElement.classList.contains('dark');
+      document.querySelectorAll('[data-sun]').forEach(e=>e.classList.toggle('hidden', dark));
+      document.querySelectorAll('[data-moon]').forEach(e=>e.classList.toggle('hidden', !dark));
+    }
+    window.toggleTheme = ()=> {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem(k, document.documentElement.classList.contains('dark')?'dark':'light');
+      syncIcons();
+    };
+    window.addEventListener('DOMContentLoaded', syncIcons);
+  })();
+</script>
+
+<!-- Top bar (mobile) -->
+<header class="md:hidden sticky top-0 z-50 bg-zinc-50/80 dark:bg-zinc-950/70 backdrop-blur border-b border-zinc-200/80 dark:border-zinc-800/80">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="#top" class="font-extrabold tracking-tight text-lg">NNC</a>
+    <div class="flex items-center gap-2">
+      <button onclick="toggleTheme()" class="glass px-3 py-2 rounded-xl2" title="Toggle theme" aria-label="Toggle theme">
+        <svg data-sun xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v2m0 14v2m7.07-12.07-1.41 1.41M6.34 17.66l-1.41 1.41M21 12h-2M5 12H3m12.66 5.66 1.41 1.41M6.34 6.34 4.93 4.93M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/></svg>
+        <svg data-moon class="hidden h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+      <button id="openMenu" class="glass px-3 py-2 rounded-xl2" aria-label="Open menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<div id="top" class="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 grid md:grid-cols-[260px_1fr] gap-6 py-8">
+  <!-- Sidebar -->
+  <aside class="hidden md:block sticky top-8 h-[calc(100vh-4rem)] overflow-auto pr-2">
+    <nav id="sideNav" class="space-y-1">
+      <div class="px-3 py-2 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Docs</div>
+      <a href="#home"      class="navlink">Home</a>
+      <a href="#overview"  class="navlink">Overview</a>
+      <a href="#consensus" class="navlink">Consensus</a>
+      <a href="#pow"       class="navlink">Proof-of-Work</a>
+      <a href="#api"       class="navlink">API</a>
+      <a href="#roadmap"   class="navlink">Roadmap</a>
+    </nav>
+  </aside>
+
+  <!-- Mobile drawer -->
+  <div id="drawer" class="fixed inset-0 bg-black/50 hidden md:hidden">
+    <div class="absolute left-0 top-0 h-full w-72 bg-zinc-50 dark:bg-zinc-950 p-4">
+      <div class="flex items-center justify-between mb-4">
+        <span class="font-extrabold tracking-tight text-lg">NNC</span>
+        <button id="closeMenu" class="glass px-3 py-2 rounded-xl2">✕</button>
+      </div>
+      <nav class="space-y-1 text-sm">
+        <a href="#home"      class="navlink">Home</a>
+        <a href="#overview"  class="navlink">Overview</a>
+        <a href="#consensus" class="navlink">Consensus</a>
+        <a href="#pow"       class="navlink">Proof-of-Work</a>
+        <a href="#api"       class="navlink">API</a>
+        <a href="#roadmap"   class="navlink">Roadmap</a>
+      </nav>
+    </div>
+  </div>
+  <script>
+    const drawer = document.getElementById('drawer');
+    const openMenu = document.getElementById('openMenu');
+    const closeMenu = document.getElementById('closeMenu');
+    if (openMenu) openMenu.onclick = ()=> drawer.classList.remove('hidden');
+    if (closeMenu) closeMenu.onclick = ()=> drawer.classList.add('hidden');
+    if (drawer) drawer.onclick = (e)=> { if(e.target===drawer) drawer.classList.add('hidden'); };
+  </script>
+
+  <!-- Main -->
+  <main class="min-w-0">
+    <div class="hidden md:flex items-center justify-between mb-6">
+      <a href="#home" class="font-extrabold tracking-tight text-lg">NNC</a>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleTheme()" class="glass px-3 py-2 rounded-xl2" title="Toggle theme" aria-label="Toggle theme">
+          <svg data-sun xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v2m0 14v2m7.07-12.07-1.41 1.41M6.34 17.66l-1.41 1.41M21 12h-2M5 12H3m12.66 5.66 1.41 1.41M6.34 6.34 4.93 4.93M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/></svg>
+          <svg data-moon class="hidden h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <article class="max-w-none">
+      <!-- HOME -->
+      <section id="home" class="section">
+        <h1 class="text-4xl font-extrabold tracking-tight">Nonce (NNC)</h1>
+        <p class="mt-2 text-lg text-zinc-600 dark:text-zinc-300">
+          A meme-friendly, educational blockchain with a fixed cap of <strong>69,420 NNC</strong>. Blocks are mined in the browser using a custom Proof-of-Work: <strong>BlessPoW-1</strong>.
+        </p>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-5">
+          <div class="glass p-5 rounded-xl2 shadow-soft">
+            <div class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1">Cap</div>
+            <div class="text-2xl font-bold">69,420 NNC</div>
+          </div>
+          <div class="glass p-5 rounded-xl2 shadow-soft">
+            <div class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1">Block time</div>
+            <div class="text-2xl font-bold">1 minute target</div>
+          </div>
+          <div class="glass p-5 rounded-xl2 shadow-soft">
+            <div class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1">Emission</div>
+            <div class="text-2xl font-bold">Yearly halving</div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <a href="#overview" class="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold inline-flex shadow-soft hover:brightness-110">Get started</a>
+        </div>
+
+        <div class="mt-8 rounded-xl2 border border-amber-200/60 dark:border-amber-700/40 bg-amber-50 text-amber-900 dark:bg-amber-900/25 dark:text-amber-100 p-4">
+          <strong>Disclaimer:</strong> NNC has no monetary value. Educational use only.
+        </div>
+      </section>
+
+      <hr class="my-12 border-zinc-200 dark:border-zinc-800" />
+
+      <!-- OVERVIEW -->
+      <section id="overview" class="section">
+        <h2 class="text-3xl font-bold mb-3">Overview</h2>
+        <p><strong>Nonce (NNC)</strong> is a playful, browser-mineable blockchain for learning.</p>
+        <div class="grid md:grid-cols-2 gap-6 mt-4">
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Goals</h3>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>Demonstrate PoW, blocks, balances, mining</li>
+              <li>Keep a meme hard cap: <strong>69,420 NNC</strong></li>
+              <li>Make mining accessible (Web Workers)</li>
+              <li>Simple, edge-friendly backend (Cloudflare Workers + D1)</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-2">Scope</h3>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>REST + WebSocket/SSE</li>
+              <li>Browser wallet &amp; miner</li>
+              <li>Exponential reward decay (yearly halvings)</li>
+              <li>Faucet + rate limits</li>
+            </ul>
+          </div>
+        </div>
+        <h3 class="text-xl font-semibold mt-8 mb-2">Non-goals</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Financial value, strong ASIC resistance, smart contracts</li>
+        </ul>
+      </section>
+
+      <hr class="my-12 border-zinc-200 dark:border-zinc-800" />
+
+      <!-- CONSENSUS -->
+      <section id="consensus" class="section">
+        <h2 class="text-3xl font-bold mb-3">Consensus &amp; Emission</h2>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Block time &amp; retarget</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Target: <strong>60 seconds</strong></li>
+          <li>Retarget window: <strong>120 blocks</strong> (~2h)
+            <ul class="list-disc pl-6">
+              <li>if avg &lt; 50s → difficulty++</li>
+              <li>if avg &gt; 75s → difficulty--</li>
+            </ul>
+          </li>
+          <li>Difficulty unit: <strong>leading zero nybbles</strong> in final hash</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Reward schedule (exponential decay)</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>1 NNC = <strong>100,000 atoms</strong></li>
+          <li><strong>Initial reward (exact):</strong> R<sub>0</sub> = 69,420 / (2 × 525,600) ≈ 0.0660388128 NNC</li>
+          <li><strong>Initial atoms:</strong> ≈ 6,603.8812785 atoms/block</li>
+          <li><strong>Halving every 525,600 blocks</strong> (~1 year at 60s)</li>
+          <li><strong>Integer payout:</strong> per-block accumulator + floor (backend). Converges to <strong>69,420 NNC</strong>.</li>
+        </ul>
+        <p class="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-brand/10 text-brand-800 dark:text-zinc-100 ring-1 ring-brand/20">
+          Minted % after n years: 1 − 0.5^n → 50%, 75%, 87.5%, 93.75%, 96.875%…
+        </p>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Chain selection</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Extend the <strong>longest height</strong></li>
+          <li>Tie-break: <strong>lexicographically smaller head hash</strong></li>
+        </ul>
+      </section>
+
+      <hr class="my-12 border-zinc-200 dark:border-zinc-800" />
+
+      <!-- POW -->
+      <section id="pow" class="section">
+        <h2 class="text-3xl font-bold mb-3">BlessPoW-1 (NNC-POW1)</h2>
+        <p>Custom Proof-of-Work designed for browsers: small scratchpad, quick verify.</p>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Inputs</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Header bytes <code>H</code> (canonical JSON order)</li>
+          <li>Height <code>height</code>, difficulty <code>D</code></li>
+          <li>Network ID: <code>NONCE-V1</code></li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Constants</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Scratchpad: <strong>64 KiB</strong></li>
+          <li>Rounds: <strong>1,024</strong></li>
+          <li>Chunk size: <strong>64 B</strong></li>
+          <li>Epoch: <code>floor(height/120)</code></li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Algorithm (sketch)</h3>
+        <ol class="list-decimal pl-6 space-y-1">
+          <li><strong>Epoch salt</strong>: <code>S = blake3("blesspow1|" + NET_ID + "|" + u32le(epoch))</code></li>
+          <li><strong>Scratchpad</strong> (64 KiB) seeded by <code>blake3("pad|" + S + "|" + H)</code>, filled as a hash chain</li>
+          <li><strong>Mixing</strong>: 1,024 rounds, index pad by 16-bit words from mix, XOR a chunk, then keyed blake3 with <code>S</code></li>
+          <li><strong>Final</strong>: <code>final = blake3("final|" + H + "|" + S + "|" + mix)</code></li>
+          <li><strong>Valid if</strong>: leading-zero-nybbles(<code>final</code>) ≥ <code>D</code></li>
+        </ol>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Difficulty</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li>Network publishes <code>D</code> via <code>/chain/head</code></li>
+          <li>Retarget ±1 nybble per 120 blocks</li>
+        </ul>
+
+        <div class="mt-6 glass p-4 rounded-xl2">
+          <strong>Educational:</strong> Not ASIC-hard by design; easy to implement and verify.
+        </div>
+      </section>
+
+      <hr class="my-12 border-zinc-200 dark:border-zinc-800" />
+
+      <!-- API -->
+      <section id="api" class="section">
+        <h2 class="text-3xl font-bold mb-3">API</h2>
+        <p>Base: <code>https://api.nonce.example</code></p>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Public</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><code>GET /chain/head</code> → { height, hash, difficulty, timestamp }</li>
+          <li><code>GET /blocks/:height</code> → block header + tx ids</li>
+          <li><code>GET /account/:addr</code> → { balance, tx_nonce }</li>
+          <li><code>GET /leaderboard</code></li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Mining</h3>
+        <pre class="bg-zinc-900 text-zinc-100 rounded-xl p-4 overflow-x-auto"><button class="copy-btn" aria-label="Copy">Copy</button><code>{
+  "endpoint": "https://api.nonce.example/mine/submit",
+  "header": {
+    "prev_hash": "...",
+    "merkle_root": "...",
+    "timestamp": 1736300000,
+    "difficulty": 6,
+    "miner_pubkey": "...",
+    "nonce": 123
+  },
+  "signature": "hex"
+}</code></pre>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Transactions</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><code>POST /tx/submit</code> (signed)</li>
+          <li><code>GET /tx/:id</code></li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Live</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><code>GET /events</code> (SSE) or <code>GET /ws</code> (WebSocket)</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold mt-6 mb-2">Faucet</h3>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><code>POST /faucet</code> (IP + address rate-limited)</li>
+        </ul>
+      </section>
+
+      <hr class="my-12 border-zinc-200 dark:border-zinc-800" />
+
+      <!-- ROADMAP -->
+      <section id="roadmap" class="section">
+        <h2 class="text-3xl font-bold mb-3">Roadmap</h2>
+
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="glass p-5 rounded-xl2">
+            <h3 class="text-lg font-semibold mb-2">v0.1</h3>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>Head endpoint, faucet, balances</li>
+              <li>Browser miner (Web Worker)</li>
+              <li>SSE/WS head updates</li>
+            </ul>
+          </div>
+          <div class="glass p-5 rounded-xl2">
+            <h3 class="text-lg font-semibold mb-2">v0.2</h3>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>Mempool + fees</li>
+              <li>Pooling protocol</li>
+              <li>Leaderboard</li>
+            </ul>
+          </div>
+          <div class="glass p-5 rounded-xl2">
+            <h3 class="text-lg font-semibold mb-2">v0.3</h3>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>Explorer UI</li>
+              <li>Snapshots/exports</li>
+              <li>Difficulty chart</li>
+            </ul>
+          </div>
+          <div class="glass p-5 rounded-xl2">
+            <h3 class="text-lg font-semibold mb-2">v0.4</h3>
+            <ul class="list-disc pl-6 space-y-1">
+              <li>Mobile-friendly miner controls</li>
+              <li>WebGL/GPU mining experiment</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </article>
+
+    <hr class="my-12 border-zinc-200 dark:border-zinc-800" />
+    <footer class="pb-10 text-sm text-zinc-500 dark:text-zinc-400">
+      <div>© 2025 NNC · Educational project. No monetary value.</div>
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Scroll-spy + reactive URL hash + active nav
+  const allNav = [...document.querySelectorAll('#sideNav .navlink, #drawer .navlink')];
+  const sections = ['home','overview','consensus','pow','api','roadmap'].map(id=>document.getElementById(id));
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      const id = e.target.id;
+      allNav.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+id));
+      history.replaceState(null,'','#'+id);
+    });
+  }, { rootMargin:'-45% 0px -50% 0px', threshold:0 });
+  sections.forEach(s=> io.observe(s));
+
+  // Copy buttons
+  document.querySelectorAll('pre .copy-btn').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const code = btn.parentElement.innerText;
+      try { await navigator.clipboard.writeText(code); btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy',1200); }
+      catch { btn.textContent='Error'; setTimeout(()=>btn.textContent='Copy',1200); }
+    };
+  });
+</script>
+</body>
+</html>
